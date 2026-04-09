@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-deployment
+  namespace: opslora-test-ns
+  labels:
+    app: order
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: 
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+      matchLabels:
+        app: order-microservice
+  template:
+    metadata:
+      labels:
+        app: order-microservice
+    spec:
+      affinity:
+        podaffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: order-microservice
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: order-container
+          image: kubectlandchill/sales-order-service:v1.2.2
+          ports:
+            - containerPort: 3000
+          
+          resources:
+            limits:
+              memory: "300Mi"
+              cpu: "200m"
+              ephemeral-storage: "500Mi"
+            requests:
+              memory: "150Mi"
+              cpu: "100m"
+              ephemeral-storage: "200Mi"
+
+          startupProbe:
+            httpGet:
+              path: /api/v1/orders/health
+              port: 3000
+              scheme: HTTP
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 24
+
+          readinessProbe:
+            httpGet:
+              path: /api/v1/orders/health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 2
+            successThreshold: 2
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /api/v1/orders/health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 0
+            periodSeconds: 15
+            timeoutSeconds: 2
+            failureThreshold: 4
