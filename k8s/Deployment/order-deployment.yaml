@@ -21,7 +21,7 @@ spec:
         app: order-microservice
     spec:
       affinity:
-        podaffinity:
+        podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 100
               podAffinityTerm:
@@ -44,15 +44,6 @@ spec:
               memory: "150Mi"
               cpu: "100m"
               ephemeral-storage: "200Mi"
-
-          startupProbe:
-            httpGet:
-              path: /api/v1/orders/health
-              port: 3000
-              scheme: HTTP
-            periodSeconds: 5
-            timeoutSeconds: 2
-            failureThreshold: 24
 
           readinessProbe:
             httpGet:
