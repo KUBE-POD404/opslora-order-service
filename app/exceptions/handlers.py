@@ -16,7 +16,7 @@ async def _error_response(
     content = {"error": error}
     if details is not None:
         content["details"] = details
-    return JSONResponse(status_code=status_code, content=content)
+    return await JSONResponse(status_code=status_code, content=content)
 
 
 async def app_exception_handler(_request: Request, exc: AppException) -> JSONResponse:
