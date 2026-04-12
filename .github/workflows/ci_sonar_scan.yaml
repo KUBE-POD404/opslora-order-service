@@ -78,8 +78,6 @@ jobs:
       - name: Check Quality Gate
         id: qg
         uses: SonarSource/sonarqube-quality-gate-action@v1
-        with:
-          pollingTimeoutSec: 300
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
