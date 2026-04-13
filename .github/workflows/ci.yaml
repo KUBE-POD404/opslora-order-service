@@ -53,9 +53,7 @@ jobs:
       - sonar-scan
       - snyk-scan
       - get-author
-
     if: ${{ always() }}
-
     runs-on: ubuntu-latest
 
     steps:
@@ -68,29 +66,31 @@ jobs:
           echo "Sonar result: ${{ needs.sonar-scan.result }}"
           echo "Snyk result: ${{ needs.snyk-scan.result }}"
 
-      - name: Determine pipeline outcome
+      - name: Determine failure reason
         id: outcome
         run: |
-          echo "Sonar result: ${{ needs.sonar-scan.result }}"
-          echo "Snyk result: ${{ needs.snyk-scan.result }}"
+          SONAR_RESULT="${{ needs.sonar-scan.result }}"
+          SNYK_RESULT="${{ needs.snyk-scan.result }}"
 
-          if [[ "${{ needs.sonar-scan.result }}" == "failure" ]]; then
+          echo "Sonar result: $SONAR_RESULT"
+          echo "Snyk result: $SNYK_RESULT"
+
+          if [[ "$SONAR_RESULT" == "failure" ]]; then
             echo "status=failure" >> $GITHUB_OUTPUT
             echo "reason=SonarQube Quality Gate Failed" >> $GITHUB_OUTPUT
             echo "tool=sonar" >> $GITHUB_OUTPUT
 
-          elif [[ "${{ needs.snyk-scan.result }}" == "failure" ]]; then
+          elif [[ "$SNYK_RESULT" == "failure" ]]; then
             echo "status=failure" >> $GITHUB_OUTPUT
             echo "reason=Snyk Security Scan Failed" >> $GITHUB_OUTPUT
             echo "tool=snyk" >> $GITHUB_OUTPUT
 
           else
             echo "status=success" >> $GITHUB_OUTPUT
-            echo "reason=Pipeline Passed Successfully" >> $GITHUB_OUTPUT
-            echo "tool=success" >> $GITHUB_OUTPUT
           fi
 
       - name: Send Notification
+        if: ${{ steps.outcome.outputs.status == 'failure' }}
         uses: ./.github/actions/notification-action
         with:
           pipeline_name: ${{ github.workflow }}

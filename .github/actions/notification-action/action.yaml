@@ -1,5 +1,5 @@
 name: CI Notification Action
-description: Send email and Slack notifications for CI status
+description: Send email and Slack notifications for CI failures
 
 inputs:
   pipeline_name:
@@ -23,9 +23,6 @@ inputs:
   tool:
     required: true
   workflow_url:
-    required: true
-  status:
-    description: success or failure
     required: true
   sonar_host_url:
     required: false
@@ -52,7 +49,7 @@ runs:
           echo "url=${{ inputs.workflow_url }}" >> $GITHUB_OUTPUT
         fi
 
-    - name: Send email
+    - name: Send Email
       uses: hilarion5/send-mail@v1
       with:
         smtp-server: smtp.hostinger.com
@@ -60,18 +57,18 @@ runs:
         smtp-secure: false
         username: ${{ inputs.smtp_username }}
         password: ${{ inputs.smtp_password }}
-        from-email: "Opslora CI Alerts <${{ inputs.mail_from }}>"
+        from-email: "CI Alerts <${{ inputs.mail_from }}>"
         to-email: ${{ inputs.mail_to }}
 
-        subject: "[CI] ${{ inputs.pipeline_name }} - ${{ inputs.failure_reason }}"
+        subject: "[CI FAILED] ${{ inputs.pipeline_name }} - ${{ inputs.repository_name }}"
 
         html: |
           <div style="margin:0;padding:24px;background:#f4f7fb;font-family:Arial;">
             <table style="max-width:700px;margin:auto;background:#fff;border-radius:12px;border:1px solid #e5e7eb;">
               
               <tr>
-                <td style="background:${{ inputs.status == 'success' && '#16a34a' || '#b91c1c' }};color:#fff;padding:18px;font-size:20px;">
-                  ${{ inputs.status == 'success' && 'Pipeline Success' || 'Pipeline Failure' }}
+                <td style="background:#b91c1c;color:#fff;padding:18px;font-size:20px;">
+                  Pipeline Failure Alert
                 </td>
               </tr>
 
@@ -81,7 +78,7 @@ runs:
                   <p><b>Repository:</b> ${{ inputs.repository_name }}</p>
                   <p><b>Author:</b> ${{ inputs.author }}</p>
                   <p><b>Tool:</b> ${{ inputs.tool }}</p>
-                  <p><b>Message:</b> ${{ inputs.failure_reason }}</p>
+                  <p><b>Reason:</b> ${{ inputs.failure_reason }}</p>
 
                   <br/>
 
@@ -99,40 +96,21 @@ runs:
             </table>
           </div>
 
-    - name: Prepare Slack values
-      id: slack_vars
-      shell: bash
-      run: |
-        if [ "${{ inputs.status }}" = "success" ]; then
-          echo "color=#16a34a" >> $GITHUB_OUTPUT
-          echo "status_text=PASSED" >> $GITHUB_OUTPUT
-          echo "header=Pipeline Success" >> $GITHUB_OUTPUT
-          echo "button_style=primary" >> $GITHUB_OUTPUT
-          echo "summary=passed" >> $GITHUB_OUTPUT
-        else
-          echo "color=#dc2626" >> $GITHUB_OUTPUT
-          echo "status_text=FAILED" >> $GITHUB_OUTPUT
-          echo "header=Pipeline Failure Alert" >> $GITHUB_OUTPUT
-          echo "button_style=danger" >> $GITHUB_OUTPUT
-          echo "summary=failed" >> $GITHUB_OUTPUT
-        fi
-
-
     - name: Post to Slack
       uses: slackapi/slack-github-action@v3.0.1
       with:
         webhook: ${{ inputs.slack_webhook }}
         webhook-type: incoming-webhook
         payload: |
-          text: "${{ inputs.pipeline_name }} ${{ steps.slack_vars.outputs.summary }}"
+          text: "${{ inputs.pipeline_name }} failed"
           attachments:
-            - color: "${{ steps.slack_vars.outputs.color }}"
+            - color: "#dc2626"
               blocks:
 
                 - type: header
                   text:
                     type: plain_text
-                    text: "${{ steps.slack_vars.outputs.header }}"
+                    text: "Pipeline Failure Alert"
 
                 - type: section
                   fields:
@@ -141,9 +119,9 @@ runs:
                     - type: mrkdwn
                       text: "*Repository:*\n${{ inputs.repository_name }}"
                     - type: mrkdwn
-                      text: "*Status:*\n${{ steps.slack_vars.outputs.status_text }}"
-                    - type: mrkdwn
                       text: "*Author:*\n${{ inputs.author }}"
+                    - type: mrkdwn
+                      text: "*Tool:*\n${{ inputs.tool }}"
 
                 - type: section
                   text:
@@ -157,11 +135,11 @@ runs:
                         type: plain_text
                         text: "View Report"
                       url: "${{ steps.build_url.outputs.url }}"
-                      style: "${{ steps.slack_vars.outputs.button_style }}"
+                      style: danger
 
                     - type: button
                       text:
                         type: plain_text
                         text: "View Workflow Run"
                       url: "${{ inputs.workflow_url }}"
-                      style: "${{ steps.slack_vars.outputs.button_style }}"
+                      style: danger
