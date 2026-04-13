@@ -110,8 +110,8 @@ jobs:
           path: ~/.sonar/cache
           key: ${{ steps.sonar-cache.outputs.cache-primary-key }}
 
-      # - name: Fail if Quality Gate failed
-      #   if: ${{ steps.qg.outputs.quality-gate-status == 'FAILED' }}
-      #   run: |
-      #     echo "SonarQube Quality Gate failed. Blocking pipeline."
-      #     exit 1
+      - name: Fail if Quality Gate failed
+        if: ${{ steps.qg.outputs.quality-gate-status == 'FAILED' }}
+        run: |
+          echo "SonarQube Quality Gate failed. Blocking pipeline."
+          exit 1

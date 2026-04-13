@@ -105,42 +105,43 @@ runs:
         webhook: ${{ inputs.slack_webhook }}
         webhook-type: incoming-webhook
         payload: |
-          attachments:
-            - color: ${{ inputs.status == 'success' && '#16a34a' || '#dc2626' }}
-              blocks:
-
-                - type: header
-                  text:
-                    type: plain_text
-                    text: "${{ inputs.status == 'success' && 'CI Pipeline Success' || 'CI Pipeline Failure' }}"
-
-                - type: section
-                  fields:
-                    - type: mrkdwn
-                      text: "*Pipeline:*\n${{ inputs.pipeline_name }}"
-                    - type: mrkdwn
-                      text: "*Repository:*\n${{ inputs.repository_name }}"
-                    - type: mrkdwn
-                      text: "*Author:*\n${{ inputs.author }}"
-                    - type: mrkdwn
-                      text: "*Tool:*\n${{ inputs.tool }}"
-
-                - type: section
-                  text:
-                    type: mrkdwn
-                    text: "*Message:*\n${{ inputs.failure_reason }}"
-
-                - type: actions
-                  elements:
-                    - type: button
-                      text:
-                        type: plain_text
-                        text: "View Report"
-                      url: "${{ steps.build_url.outputs.url }}"
-                      style: ${{ inputs.status == 'success' && 'primary' || 'danger' }}
-
-                    - type: button
-                      text:
-                        type: plain_text
-                        text: "View Workflow"
-                      url: "${{ inputs.workflow_url }}"
+          {
+            "attachments": [
+              {
+                "color": "${{ inputs.status == 'success' && '#16a34a' || '#dc2626' }}",
+                "blocks": [
+                  {
+                    "type": "header",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "${{ inputs.status == 'success' && 'CI Pipeline Success' || 'CI Pipeline Failure' }}"
+                    }
+                  },
+                  {
+                    "type": "section",
+                    "fields": [
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Pipeline:*\\n${{ inputs.pipeline_name }}"
+                      },
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Repository:*\\n${{ inputs.repository_name }}"
+                      },
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Author:*\\n${{ inputs.author }}"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "*Message:*\\n${{ inputs.failure_reason }}"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
