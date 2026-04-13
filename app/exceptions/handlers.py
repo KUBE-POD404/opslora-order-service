@@ -10,31 +10,31 @@ from app.exceptions.custom_exception import AppException
 logger = logging.getLogger(__name__)
 
 
-async def _error_response(
+def _error_response(
     status_code: int, error: str, details: object | None = None
 ) -> JSONResponse:
     content = {"error": error}
     if details is not None:
         content["details"] = details
-    return await JSONResponse(status_code=status_code, content=content)
+    return JSONResponse(status_code=status_code, content=content)
 
 
-async def app_exception_handler(_request: Request, exc: AppException) -> JSONResponse:
-    return await _error_response(exc.status_code, exc.message, exc.details)
+def app_exception_handler(_request: Request, exc: AppException) -> JSONResponse:
+    return _error_response(exc.status_code, exc.message, exc.details)
 
 
-async def http_exception_handler(
+def http_exception_handler(
     _request: Request, exc: StarletteHTTPException
 ) -> JSONResponse:
-    return await _error_response(exc.status_code, str(exc.detail))
+    return _error_response(exc.status_code, str(exc.detail))
 
 
-async def validation_exception_handler(
+def validation_exception_handler(
     _request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    return await _error_response(422, "Validation error", exc.errors())
+    return _error_response(422, "Validation error", exc.errors())
 
 
-async def generic_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
+def generic_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
     logger.exception("Unhandled application error", exc_info=exc)
-    return await _error_response(500, "Internal server error")
+    return _error_response(500, "Internal server error")

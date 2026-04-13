@@ -1,5 +1,5 @@
 name: CI Notification Action
-description: Send email and Slack notifications for CI failures
+description: Send email and Slack notifications for CI status
 
 inputs:
   pipeline_name:
@@ -23,6 +23,9 @@ inputs:
   tool:
     required: true
   workflow_url:
+    required: true
+  status:
+    description: success or failure
     required: true
   sonar_host_url:
     required: false
@@ -59,14 +62,16 @@ runs:
         password: ${{ inputs.smtp_password }}
         from-email: "Opslora CI Alerts <${{ inputs.mail_from }}>"
         to-email: ${{ inputs.mail_to }}
-        subject: "[CI ALERT] ${{ inputs.pipeline_name }} FAILED"
+
+        subject: "[CI] ${{ inputs.pipeline_name }} - ${{ inputs.failure_reason }}"
 
         html: |
           <div style="margin:0;padding:24px;background:#f4f7fb;font-family:Arial;">
             <table style="max-width:700px;margin:auto;background:#fff;border-radius:12px;border:1px solid #e5e7eb;">
+              
               <tr>
-                <td style="background:#b91c1c;color:#fff;padding:18px;font-size:20px;">
-                  Pipeline Failure Alert
+                <td style="background:${{ inputs.status == 'success' && '#16a34a' || '#b91c1c' }};color:#fff;padding:18px;font-size:20px;">
+                  ${{ inputs.status == 'success' && 'Pipeline Success' || 'Pipeline Failure' }}
                 </td>
               </tr>
 
@@ -75,7 +80,8 @@ runs:
                   <p><b>Pipeline:</b> ${{ inputs.pipeline_name }}</p>
                   <p><b>Repository:</b> ${{ inputs.repository_name }}</p>
                   <p><b>Author:</b> ${{ inputs.author }}</p>
-                  <p><b>Reason:</b> ${{ inputs.failure_reason }}</p>
+                  <p><b>Tool:</b> ${{ inputs.tool }}</p>
+                  <p><b>Message:</b> ${{ inputs.failure_reason }}</p>
 
                   <br/>
 
@@ -100,13 +106,13 @@ runs:
         webhook-type: incoming-webhook
         payload: |
           attachments:
-            - color: "#dc2626"
+            - color: ${{ inputs.status == 'success' && '#16a34a' || '#dc2626' }}
               blocks:
 
                 - type: header
                   text:
                     type: plain_text
-                    text: "CI Pipeline Failure"
+                    text: "${{ inputs.status == 'success' && 'CI Pipeline Success' || 'CI Pipeline Failure' }}"
 
                 - type: section
                   fields:
@@ -122,7 +128,7 @@ runs:
                 - type: section
                   text:
                     type: mrkdwn
-                    text: "*Reason:*\n${{ inputs.failure_reason }}"
+                    text: "*Message:*\n${{ inputs.failure_reason }}"
 
                 - type: actions
                   elements:
@@ -131,7 +137,7 @@ runs:
                         type: plain_text
                         text: "View Report"
                       url: "${{ steps.build_url.outputs.url }}"
-                      style: danger
+                      style: ${{ inputs.status == 'success' && 'primary' || 'danger' }}
 
                     - type: button
                       text:

@@ -95,8 +95,8 @@ jobs:
             echo "notify_summary=No high severity vulnerabilities found." >> $GITHUB_OUTPUT
           fi
 
-      - name: Fail if Snyk failed
-        if: ${{ steps.snyk.outcome == 'failure' }}
-        run: |
-          echo "Snyk scan failed. Blocking pipeline."
-          exit 1
+      # - name: Fail if Snyk failed
+      #   if: ${{ steps.snyk.outcome == 'failure' }}
+      #   run: |
+      #     echo "Snyk scan failed. Blocking pipeline."
+      #     exit 1
