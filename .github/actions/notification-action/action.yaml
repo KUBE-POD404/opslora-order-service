@@ -99,21 +99,40 @@ runs:
             </table>
           </div>
 
+    - name: Prepare Slack values
+      id: slack_vars
+      shell: bash
+      run: |
+        if [ "${{ inputs.status }}" = "success" ]; then
+          echo "color=#16a34a" >> $GITHUB_OUTPUT
+          echo "status_text=PASSED" >> $GITHUB_OUTPUT
+          echo "header=Pipeline Success" >> $GITHUB_OUTPUT
+          echo "button_style=primary" >> $GITHUB_OUTPUT
+          echo "summary=passed" >> $GITHUB_OUTPUT
+        else
+          echo "color=#dc2626" >> $GITHUB_OUTPUT
+          echo "status_text=FAILED" >> $GITHUB_OUTPUT
+          echo "header=Pipeline Failure Alert" >> $GITHUB_OUTPUT
+          echo "button_style=danger" >> $GITHUB_OUTPUT
+          echo "summary=failed" >> $GITHUB_OUTPUT
+        fi
+
+
     - name: Post to Slack
       uses: slackapi/slack-github-action@v3.0.1
       with:
         webhook: ${{ inputs.slack_webhook }}
         webhook-type: incoming-webhook
         payload: |
-          text: "${{ inputs.pipeline_name }} ${{ inputs.status == 'success' && 'passed' || 'failed' }}"
+          text: "${{ inputs.pipeline_name }} ${{ steps.slack_vars.outputs.summary }}"
           attachments:
-            - color: "${{ inputs.status == 'success' && '#16a34a' || '#dc2626' }}"
+            - color: "${{ steps.slack_vars.outputs.color }}"
               blocks:
 
                 - type: header
                   text:
                     type: plain_text
-                    text: "${{ inputs.status == 'success' && 'Pipeline Success' || 'Pipeline Failure Alert' }}"
+                    text: "${{ steps.slack_vars.outputs.header }}"
 
                 - type: section
                   fields:
@@ -122,7 +141,7 @@ runs:
                     - type: mrkdwn
                       text: "*Repository:*\n${{ inputs.repository_name }}"
                     - type: mrkdwn
-                      text: "*Status:*\n${{ inputs.status == 'success' && 'PASSED' || 'FAILED' }}"
+                      text: "*Status:*\n${{ steps.slack_vars.outputs.status_text }}"
                     - type: mrkdwn
                       text: "*Author:*\n${{ inputs.author }}"
 
@@ -138,11 +157,11 @@ runs:
                         type: plain_text
                         text: "View Report"
                       url: "${{ steps.build_url.outputs.url }}"
-                      style: ${{ inputs.status == 'success' && 'primary' || 'danger' }}
+                      style: "${{ steps.slack_vars.outputs.button_style }}"
 
                     - type: button
                       text:
                         type: plain_text
                         text: "View Workflow Run"
                       url: "${{ inputs.workflow_url }}"
-                      style: ${{ inputs.status == 'success' && 'primary' || 'danger' }}
+                      style: "${{ steps.slack_vars.outputs.button_style }}"
