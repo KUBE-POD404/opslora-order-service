@@ -71,20 +71,18 @@ jobs:
       - name: Determine pipeline outcome
         id: outcome
         run: |
-          if [[ "${{ needs.sonar-scan.outputs.quality_gate_status }}" == "FAILED" ]]; then
+          echo "Sonar result: ${{ needs.sonar-scan.result }}"
+          echo "Snyk result: ${{ needs.snyk-scan.result }}"
+
+          if [[ "${{ needs.sonar-scan.result }}" == "failure" ]]; then
             echo "status=failure" >> $GITHUB_OUTPUT
             echo "reason=SonarQube Quality Gate Failed" >> $GITHUB_OUTPUT
             echo "tool=sonar" >> $GITHUB_OUTPUT
 
-          elif [[ "${{ needs.snyk-scan.outputs.snyk_status }}" == "failure" ]]; then
+          elif [[ "${{ needs.snyk-scan.result }}" == "failure" ]]; then
             echo "status=failure" >> $GITHUB_OUTPUT
             echo "reason=Snyk Security Scan Failed" >> $GITHUB_OUTPUT
             echo "tool=snyk" >> $GITHUB_OUTPUT
-
-          elif [[ "${{ needs.sonar-scan.result }}" == "failure" || "${{ needs.snyk-scan.result }}" == "failure" ]]; then
-            echo "status=failure" >> $GITHUB_OUTPUT
-            echo "reason=Pipeline Failed" >> $GITHUB_OUTPUT
-            echo "tool=generic" >> $GITHUB_OUTPUT
 
           else
             echo "status=success" >> $GITHUB_OUTPUT
