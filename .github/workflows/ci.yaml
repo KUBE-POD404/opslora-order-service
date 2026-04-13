@@ -48,48 +48,48 @@ jobs:
     secrets: inherit
 
   notify:
-  name: Notify Pipeline Result
-  needs:
-    - sonar-scan
-    - snyk-scan
-    - get-author
+    name: Notify Pipeline Result
+    needs:
+      - sonar-scan
+      - snyk-scan
+      - get-author
 
-  if: ${{ always() && (needs.sonar-scan.result == 'failure' || needs.snyk-scan.result == 'failure') }}
+    if: ${{ always() && (needs.sonar-scan.result == 'failure' || needs.snyk-scan.result == 'failure') }}
 
-  runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
 
-  steps:
-    - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Determine failure reason
-      id: outcome
-      run: |
-        if [[ "${{ needs.sonar-scan.result }}" == "failure" ]]; then
-          echo "status=failure" >> $GITHUB_OUTPUT
-          echo "reason=SonarQube Quality Gate Failed" >> $GITHUB_OUTPUT
-          echo "tool=sonar" >> $GITHUB_OUTPUT
+      - name: Determine failure reason
+        id: outcome
+        run: |
+          if [[ "${{ needs.sonar-scan.result }}" == "failure" ]]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "reason=SonarQube Quality Gate Failed" >> $GITHUB_OUTPUT
+            echo "tool=sonar" >> $GITHUB_OUTPUT
 
-        elif [[ "${{ needs.snyk-scan.result }}" == "failure" ]]; then
-          echo "status=failure" >> $GITHUB_OUTPUT
-          echo "reason=Snyk Security Scan Failed" >> $GITHUB_OUTPUT
-          echo "tool=snyk" >> $GITHUB_OUTPUT
-        fi
+          elif [[ "${{ needs.snyk-scan.result }}" == "failure" ]]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "reason=Snyk Security Scan Failed" >> $GITHUB_OUTPUT
+            echo "tool=snyk" >> $GITHUB_OUTPUT
+          fi
 
-    - name: Send Notification
-      uses: ./.github/actions/notification-action
-      with:
-        pipeline_name: ${{ github.workflow }}
-        repository_name: ${{ github.repository }}
-        failure_reason: ${{ steps.outcome.outputs.reason }}
-        author: ${{ needs.get-author.outputs.name || github.actor }}
-        smtp_username: ${{ secrets.SMTP_USERNAME }}
-        smtp_password: ${{ secrets.SMTP_PASSWORD }}
-        mail_from: ${{ secrets.MAIL_FROM }}
-        mail_to: ${{ needs.get-author.outputs.email }}
-        slack_webhook: ${{ secrets.SLACK_INCOMING_WEBHOOK }}
-        tool: ${{ steps.outcome.outputs.tool }}
-        workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        sonar_host_url: ${{ secrets.SONAR_HOST_URL }}
-        sonar_project_key: ${{ secrets.SONAR_PROJECT_KEY }}
-        snyk_org: ${{ secrets.SNYK_ORG }}
-        snyk_project_id: ${{ secrets.SNYK_PROJECT_ID }}
+      - name: Send Notification
+        uses: ./.github/actions/notification-action
+        with:
+          pipeline_name: ${{ github.workflow }}
+          repository_name: ${{ github.repository }}
+          failure_reason: ${{ steps.outcome.outputs.reason }}
+          author: ${{ needs.get-author.outputs.name || github.actor }}
+          smtp_username: ${{ secrets.SMTP_USERNAME }}
+          smtp_password: ${{ secrets.SMTP_PASSWORD }}
+          mail_from: ${{ secrets.MAIL_FROM }}
+          mail_to: ${{ needs.get-author.outputs.email }}
+          slack_webhook: ${{ secrets.SLACK_INCOMING_WEBHOOK }}
+          tool: ${{ steps.outcome.outputs.tool }}
+          workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          sonar_host_url: ${{ secrets.SONAR_HOST_URL }}
+          sonar_project_key: ${{ secrets.SONAR_PROJECT_KEY }}
+          snyk_org: ${{ secrets.SNYK_ORG }}
+          snyk_project_id: ${{ secrets.SNYK_PROJECT_ID }}
