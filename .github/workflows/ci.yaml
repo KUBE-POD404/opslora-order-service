@@ -96,6 +96,7 @@ jobs:
           pipeline_name: ${{ github.workflow }}
           repository_name: ${{ github.repository }}
           failure_reason: ${{ steps.outcome.outputs.reason }}
+          status: ${{ steps.outcome.outputs.status }}
           author: ${{ needs.get-author.outputs.name || github.actor }}
           smtp_username: ${{ secrets.SMTP_USERNAME }}
           smtp_password: ${{ secrets.SMTP_PASSWORD }}
