@@ -1,4 +1,5 @@
 from typing import Annotated
+
 from fastapi import APIRouter, Depends, Query, status, Request
 from sqlalchemy.orm import Session
 
@@ -60,8 +61,8 @@ def get_order_api(
 def list_orders_api(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[object, Depends(require_permission("order.read"))],
-    page: Annotated[int, Query(1, ge=1)],
-    limit: Annotated[int, Query(15, ge=1, le=100)],
+    page: Annotated[int, Query(ge=1)] = 1,
+    limit: Annotated[int, Query(ge=1, le=100)] = 15,
     status: str | None = None,
     customer_id: int | None = None
 ):
