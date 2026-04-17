@@ -1,3 +1,4 @@
+#stage 1
 FROM dhi.io/python:3.13-dev AS builder
 
 WORKDIR /app
@@ -11,7 +12,7 @@ COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
     /app/venv/bin/pip install -r requirements.txt
 
-
+#stage 2
 FROM dhi.io/python:3.13.13
 
 WORKDIR /app
