@@ -47,7 +47,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
+      
+      #Sonar
       - name: Sonar Notification
         if: ${{ needs.sonar-scan.outputs.quality_gate_status == 'FAILED' }}
         uses: ./.github/actions/notification-action
@@ -63,7 +64,8 @@ jobs:
           slack_webhook: ${{ secrets.SLACK_INCOMING_WEBHOOK }}
           workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           report_url: ${{ secrets.SONAR_HOST_URL }}/dashboard?id=${{ secrets.SONAR_PROJECT_KEY }}
-
+        
+        #Synk 
       - name: Snyk Notification
         if: ${{ needs.snyk-scan.outputs.snyk_status == 'failure' }}
         uses: ./.github/actions/notification-action
