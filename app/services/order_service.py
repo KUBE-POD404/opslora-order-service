@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-import os
 
 from app.models.order import Order
 from app.models.order_item import OrderItem
@@ -10,11 +9,12 @@ from app.exceptions.custom_exceptions import NotFoundException, ConflictExceptio
 from app.utils.service_client import authenticated_get
 
 from app.core.celery_app import celery
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-CUSTOMER_SERVICE_URL = os.getenv("CUSTOMER_SERVICE_URL")
-API_VERSION = os.getenv("API_VERSION", "/api/v1")
+CUSTOMER_SERVICE_URL = settings.customer_service_url
+API_VERSION = settings.api_version
 
 
 # -----------------------------
