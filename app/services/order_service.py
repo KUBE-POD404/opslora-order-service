@@ -31,10 +31,15 @@ def fetch_customer(customer_id: int, auth_header: str):
         raise NotFoundException("Customer not found")
 
     data = response.json()
+    customer_email = data.get("email")
+    customer_name = data.get("name") or data.get("customer_name")
+
+    if not customer_email or not customer_name:
+        raise ConflictException("Invalid customer service response")
 
     return {
-        "email": data.get("email"),
-        "name": data.get("name") or data.get("customer_name")
+        "email": customer_email,
+        "name": customer_name
     }
 
 
