@@ -9,6 +9,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-that-is-long-enough")
 os.environ.setdefault("RABBITMQ_URL", "memory://")
 os.environ.setdefault("CUSTOMER_SERVICE_URL", "http://customer-service:3000")
+os.environ.setdefault("INVENTORY_SERVICE_URL", "http://inventory-service:3000")
 os.environ.setdefault("API_VERSION", "/api/v1")
 
 from app.database import Base  # noqa: E402

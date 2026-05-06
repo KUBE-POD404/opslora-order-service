@@ -41,3 +41,36 @@ def authenticated_get(url: str, token: str, timeout: int = DEFAULT_TIMEOUT_SECON
             extra={"event": "service_call_failed", "method": "GET", "target_url": url},
         )
         raise
+
+
+def authenticated_post(url: str, token: str, payload: dict, timeout: int = DEFAULT_TIMEOUT_SECONDS):
+    request_id = request_id_ctx.get() or str(uuid.uuid4())
+    started = time.perf_counter()
+
+    try:
+        response = requests.post(
+            url,
+            json=payload,
+            headers={
+                "Authorization": token,
+                "X-Request-ID": request_id,
+            },
+            timeout=timeout,
+        )
+        logger.info(
+            "service_call_completed",
+            extra={
+                "event": "service_call_completed",
+                "method": "POST",
+                "target_url": url,
+                "status_code": response.status_code,
+                "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+            },
+        )
+        return response
+    except requests.RequestException:
+        logger.exception(
+            "service_call_failed",
+            extra={"event": "service_call_failed", "method": "POST", "target_url": url},
+        )
+        raise

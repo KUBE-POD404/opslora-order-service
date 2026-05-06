@@ -6,7 +6,7 @@ from app.models.order import Order
 from app.models.order_item import OrderItem
 
 from app.exceptions.custom_exceptions import NotFoundException, ConflictException
-from app.utils.service_client import authenticated_get
+from app.utils.service_client import authenticated_get, authenticated_post
 
 from app.core.celery_app import celery
 from app.core.config import settings
@@ -14,6 +14,7 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 CUSTOMER_SERVICE_URL = settings.customer_service_url
+INVENTORY_SERVICE_URL = settings.inventory_service_url
 API_VERSION = settings.api_version
 
 
@@ -64,6 +65,87 @@ def fetch_customer(customer_id: int, auth_header: str):
     }
 
 
+def fetch_product_snapshot(product_id: int, auth_header: str):
+    url = f"{INVENTORY_SERVICE_URL}{API_VERSION}/inventory/products/{product_id}/order-snapshot"
+    response = authenticated_get(url, auth_header)
+    logger.info("Calling inventory service", extra={"url": url})
+
+    if response.status_code == 404:
+        raise NotFoundException("Product not found")
+    if response.status_code == 409:
+        raise ConflictException("Product is inactive")
+    if response.status_code != 200:
+        raise ConflictException("Invalid inventory service response")
+
+    data = response.json()
+    required_fields = ["id", "name", "sku", "unit_of_measure", "sale_price", "tax_rate"]
+    if any(data.get(field) is None for field in required_fields):
+        raise ConflictException("Invalid inventory service response")
+    return data
+
+
+def build_order_item_payloads(items: list, auth_header: str):
+    prepared_items = []
+    for item in items:
+        if item.get("product_id") is not None:
+            product = fetch_product_snapshot(item["product_id"], auth_header)
+            prepared_items.append(
+                {
+                    "product_id": product["id"],
+                    "sku": product["sku"],
+                    "product_name": product["name"],
+                    "hsn_sac_code": product.get("hsn_sac_code"),
+                    "unit_of_measure": product["unit_of_measure"],
+                    "quantity": item["quantity"],
+                    "unit_price": product["sale_price"],
+                    "tax_rate": product["tax_rate"],
+                }
+            )
+        else:
+            prepared_items.append(
+                {
+                    "product_id": None,
+                    "sku": None,
+                    "product_name": item["product_name"],
+                    "hsn_sac_code": None,
+                    "unit_of_measure": None,
+                    "quantity": item["quantity"],
+                    "unit_price": item["unit_price"],
+                    "tax_rate": None,
+                }
+            )
+    return prepared_items
+
+
+def deduct_inventory_stock(order: Order, items: list[OrderItem], auth_header: str):
+    stock_items = [
+        {"product_id": item.product_id, "quantity": item.quantity}
+        for item in items
+        if item.product_id is not None
+    ]
+    if not stock_items:
+        return
+
+    url = f"{INVENTORY_SERVICE_URL}{API_VERSION}/inventory/stock/deduct"
+    response = authenticated_post(
+        url,
+        auth_header,
+        {
+            "reference_type": "ORDER",
+            "reference_id": order.id,
+            "items": stock_items,
+        },
+    )
+    logger.info("Calling inventory stock deduction", extra={"url": url, "order_id": order.id})
+
+    if response.status_code == 404:
+        raise NotFoundException("Inventory product or stock balance not found")
+    if response.status_code == 409:
+        raise ConflictException("Insufficient inventory stock")
+    if response.status_code != 200:
+        raise ConflictException("Inventory stock deduction failed")
+
+
 # -----------------------------
 # HELPER: BUILD PAYLOAD
 # -----------------------------
@@ -81,7 +163,21 @@ def build_order_payload(order: Order, items: list):
         "customer_gstin": order.customer_gstin,
         "customer_tax_registration_type": order.customer_tax_registration_type,
         "customer_place_of_supply": order.customer_place_of_supply,
-        "items": items
+        "items": [
+            {
+                "product_id": item.product_id,
+                "sku": item.sku,
+                "product_name": item.product_name,
+                "hsn_sac_code": item.hsn_sac_code,
+                "unit_of_measure": item.unit_of_measure,
+                "quantity": item.quantity,
+                "unit_price": item.unit_price,
+                "tax_rate": item.tax_rate,
+            }
+            if hasattr(item, "product_name")
+            else item
+            for item in items
+        ],
     }
 
 
@@ -139,6 +235,7 @@ def create_order(
     logger.info("Creating order", extra={"customer_id": customer_id})
 
     customer = fetch_customer(customer_id, auth_header)
+    prepared_items = build_order_item_payloads(items, auth_header)
 
     order = Order(
         organization_id=organization_id,
@@ -175,13 +272,18 @@ def create_order(
     db.commit()
     db.refresh(order)
 
-    for item in items:
+    for item in prepared_items:
         db.add(
             OrderItem(
                 order_id=order.id,
+                product_id=item["product_id"],
+                sku=item["sku"],
                 product_name=item["product_name"],
+                hsn_sac_code=item["hsn_sac_code"],
+                unit_of_measure=item["unit_of_measure"],
                 quantity=item["quantity"],
                 unit_price=item["unit_price"],
+                tax_rate=item["tax_rate"],
             )
         )
 
@@ -192,7 +294,7 @@ def create_order(
     celery.send_task(
         "notification.send_order_created_email",
         args=[{
-            "payload": build_order_payload(order, items)
+            "payload": build_order_payload(order, prepared_items)
         }],
         queue="notification_queue"
     )
@@ -246,7 +348,7 @@ def list_orders(
 # -----------------------------
 # UPDATE ORDER
 # -----------------------------
-def update_order(db: Session, order_id: int, organization_id: int, items: list):
+def update_order(db: Session, order_id: int, organization_id: int, items: list, auth_header: str):
 
     order = get_order_db(db, order_id, organization_id)
 
@@ -255,13 +357,20 @@ def update_order(db: Session, order_id: int, organization_id: int, items: list):
 
     db.query(OrderItem).filter(OrderItem.order_id == order.id).delete()
 
-    for item in items:
+    prepared_items = build_order_item_payloads(items, auth_header)
+
+    for item in prepared_items:
         db.add(
             OrderItem(
                 order_id=order.id,
+                product_id=item["product_id"],
+                sku=item["sku"],
                 product_name=item["product_name"],
+                hsn_sac_code=item["hsn_sac_code"],
+                unit_of_measure=item["unit_of_measure"],
                 quantity=item["quantity"],
                 unit_price=item["unit_price"],
+                tax_rate=item["tax_rate"],
             )
         )
 
@@ -273,12 +382,18 @@ def update_order(db: Session, order_id: int, organization_id: int, items: list):
 # -----------------------------
 # CONFIRM ORDER
 # -----------------------------
-def confirm_order(db: Session, order_id: int, organization_id: int):
+def confirm_order(db: Session, order_id: int, organization_id: int, auth_header: str):
 
     order = get_order_db(db, order_id, organization_id)
 
     if order.status != "CREATED":
         raise ConflictException("Only CREATED orders can be confirmed")
+
+    items = db.query(OrderItem).filter(
+        OrderItem.order_id == order.id
+    ).all()
+
+    deduct_inventory_stock(order, items, auth_header)
 
     order.status = "CONFIRMED"
     db.commit()
@@ -286,15 +401,16 @@ def confirm_order(db: Session, order_id: int, organization_id: int):
 
     logger.info("Order confirmed", extra={"order_id": order.id})
 
-    items = db.query(OrderItem).filter(
-        OrderItem.order_id == order.id
-    ).all()
-
     items_payload = [
         {
+            "product_id": item.product_id,
+            "sku": item.sku,
             "product_name": item.product_name,
+            "hsn_sac_code": item.hsn_sac_code,
+            "unit_of_measure": item.unit_of_measure,
             "quantity": item.quantity,
-            "unit_price": item.unit_price
+            "unit_price": item.unit_price,
+            "tax_rate": item.tax_rate,
         }
         for item in items
     ]
@@ -332,9 +448,14 @@ def cancel_order(db: Session, order_id: int, organization_id: int):
 
     items_payload = [
         {
+            "product_id": item.product_id,
+            "sku": item.sku,
             "product_name": item.product_name,
+            "hsn_sac_code": item.hsn_sac_code,
+            "unit_of_measure": item.unit_of_measure,
             "quantity": item.quantity,
-            "unit_price": item.unit_price
+            "unit_price": item.unit_price,
+            "tax_rate": item.tax_rate,
         }
         for item in items
     ]
