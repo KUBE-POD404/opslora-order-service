@@ -22,7 +22,7 @@ API_VERSION = settings.api_version
 # -----------------------------
 def fetch_customer(customer_id: int, auth_header: str):
 
-    url = f"{CUSTOMER_SERVICE_URL}{API_VERSION}/customers/{customer_id}"
+    url = f"{CUSTOMER_SERVICE_URL}{API_VERSION}/customers/{customer_id}/order-snapshot"
 
     response = authenticated_get(url, auth_header)
     logger.info("Calling customer service", extra={"url": url})
@@ -39,7 +39,28 @@ def fetch_customer(customer_id: int, auth_header: str):
 
     return {
         "email": customer_email,
-        "name": customer_name
+        "name": customer_name,
+        "display_name": data.get("display_name"),
+        "phone": data.get("phone"),
+        "customer_type": data.get("customer_type"),
+        "tax_id": data.get("tax_id"),
+        "gstin": data.get("gstin"),
+        "tax_registration_type": data.get("tax_registration_type"),
+        "place_of_supply": data.get("place_of_supply"),
+        "billing_address_line1": data.get("billing_address_line1"),
+        "billing_address_line2": data.get("billing_address_line2"),
+        "billing_city": data.get("billing_city"),
+        "billing_state": data.get("billing_state"),
+        "billing_postal_code": data.get("billing_postal_code"),
+        "billing_country": data.get("billing_country"),
+        "shipping_same_as_billing": data.get("shipping_same_as_billing"),
+        "shipping_address_line1": data.get("shipping_address_line1"),
+        "shipping_address_line2": data.get("shipping_address_line2"),
+        "shipping_city": data.get("shipping_city"),
+        "shipping_state": data.get("shipping_state"),
+        "shipping_postal_code": data.get("shipping_postal_code"),
+        "shipping_country": data.get("shipping_country"),
+        "payment_terms_days": data.get("payment_terms_days"),
     }
 
 
@@ -53,6 +74,13 @@ def build_order_payload(order: Order, items: list):
         "organization_id": order.organization_id,
         "email": order.customer_email,
         "customer_name": order.customer_name,
+        "customer_display_name": order.customer_display_name,
+        "customer_phone": order.customer_phone,
+        "customer_type": order.customer_type,
+        "customer_tax_id": order.customer_tax_id,
+        "customer_gstin": order.customer_gstin,
+        "customer_tax_registration_type": order.customer_tax_registration_type,
+        "customer_place_of_supply": order.customer_place_of_supply,
         "items": items
     }
 
@@ -117,6 +145,27 @@ def create_order(
         customer_id=customer_id,
         customer_email=customer["email"],
         customer_name=customer["name"],
+        customer_display_name=customer.get("display_name"),
+        customer_phone=customer.get("phone"),
+        customer_type=customer.get("customer_type"),
+        customer_tax_id=customer.get("tax_id"),
+        customer_gstin=customer.get("gstin"),
+        customer_tax_registration_type=customer.get("tax_registration_type"),
+        customer_place_of_supply=customer.get("place_of_supply"),
+        billing_address_line1=customer.get("billing_address_line1"),
+        billing_address_line2=customer.get("billing_address_line2"),
+        billing_city=customer.get("billing_city"),
+        billing_state=customer.get("billing_state"),
+        billing_postal_code=customer.get("billing_postal_code"),
+        billing_country=customer.get("billing_country"),
+        shipping_same_as_billing=customer.get("shipping_same_as_billing"),
+        shipping_address_line1=customer.get("shipping_address_line1"),
+        shipping_address_line2=customer.get("shipping_address_line2"),
+        shipping_city=customer.get("shipping_city"),
+        shipping_state=customer.get("shipping_state"),
+        shipping_postal_code=customer.get("shipping_postal_code"),
+        shipping_country=customer.get("shipping_country"),
+        payment_terms_days=customer.get("payment_terms_days"),
         status="CREATED",
         created_by_user_id=created_by_user_id,
         created_at=datetime.now(timezone.utc),

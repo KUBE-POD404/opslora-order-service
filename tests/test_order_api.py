@@ -41,7 +41,17 @@ def test_order_api_create_list_confirm_and_cancel_rules(monkeypatch, no_op_celer
         )
 
     def fake_fetch_customer(customer_id, auth_header):
-        return {"email": "buyer@example.com", "name": "Acme Buyer"}
+        return {
+            "email": "buyer@example.com",
+            "name": "Acme Buyer",
+            "display_name": "Acme",
+            "phone": "+91-9876543210",
+            "customer_type": "BUSINESS",
+            "gstin": "29ABCDE1234F1Z5",
+            "place_of_supply": "Karnataka",
+            "shipping_same_as_billing": True,
+            "payment_terms_days": 30,
+        }
 
     monkeypatch.setattr("app.services.order_service.fetch_customer", fake_fetch_customer)
 
@@ -65,6 +75,9 @@ def test_order_api_create_list_confirm_and_cancel_rules(monkeypatch, no_op_celer
         assert create_response.status_code == 201
         order = create_response.json()
         assert order["customer_email"] == "buyer@example.com"
+        assert order["customer_display_name"] == "Acme"
+        assert order["customer_gstin"] == "29ABCDE1234F1Z5"
+        assert order["payment_terms_days"] == 30
         assert order["status"] == "CREATED"
         assert order["total"] == 33.0
         assert len(no_op_celery.tasks) == 1

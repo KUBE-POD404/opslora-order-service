@@ -4,11 +4,27 @@ from app.exceptions.custom_exceptions import ConflictException, NotFoundExceptio
 from app.services import order_service
 
 
+def customer_snapshot():
+    return {
+        "email": "buyer@example.com",
+        "name": "Buyer",
+        "display_name": "Buyer Co",
+        "phone": "+91-9876543210",
+        "customer_type": "BUSINESS",
+        "gstin": "29ABCDE1234F1Z5",
+        "place_of_supply": "Karnataka",
+        "billing_city": "Bengaluru",
+        "billing_country": "India",
+        "shipping_same_as_billing": True,
+        "payment_terms_days": 30,
+    }
+
+
 def test_create_order_fetches_customer_and_calculates_total(db_session, monkeypatch, no_op_celery):
     monkeypatch.setattr(
         order_service,
         "fetch_customer",
-        lambda customer_id, auth_header: {"email": "buyer@example.com", "name": "Buyer"},
+        lambda customer_id, auth_header: customer_snapshot(),
     )
 
     order = order_service.create_order(
@@ -22,6 +38,9 @@ def test_create_order_fetches_customer_and_calculates_total(db_session, monkeypa
 
     assert order.customer_id == 42
     assert order.customer_email == "buyer@example.com"
+    assert order.customer_display_name == "Buyer Co"
+    assert order.customer_gstin == "29ABCDE1234F1Z5"
+    assert order.payment_terms_days == 30
     assert order.total == 200.0
     assert len(order.items) == 1
     assert no_op_celery.tasks[0][0][0] == "notification.send_order_created_email"
@@ -31,7 +50,7 @@ def test_confirm_order_changes_status_and_publishes_event(db_session, monkeypatc
     monkeypatch.setattr(
         order_service,
         "fetch_customer",
-        lambda customer_id, auth_header: {"email": "buyer@example.com", "name": "Buyer"},
+        lambda customer_id, auth_header: customer_snapshot(),
     )
     order = order_service.create_order(
         db_session,
@@ -52,7 +71,7 @@ def test_confirming_cancelled_order_is_rejected(db_session, monkeypatch, no_op_c
     monkeypatch.setattr(
         order_service,
         "fetch_customer",
-        lambda customer_id, auth_header: {"email": "buyer@example.com", "name": "Buyer"},
+        lambda customer_id, auth_header: customer_snapshot(),
     )
     order = order_service.create_order(
         db_session,
@@ -72,7 +91,7 @@ def test_order_reads_are_tenant_scoped(db_session, monkeypatch, no_op_celery):
     monkeypatch.setattr(
         order_service,
         "fetch_customer",
-        lambda customer_id, auth_header: {"email": "buyer@example.com", "name": "Buyer"},
+        lambda customer_id, auth_header: customer_snapshot(),
     )
     order = order_service.create_order(
         db_session,
