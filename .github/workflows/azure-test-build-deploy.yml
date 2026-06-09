@@ -28,7 +28,7 @@ env:
   CHART_PATH: opslora-helm/apps/order
   RELEASE_NAME: order-service-azure-test
   NAMESPACE: opslora-app-ns
-  MIGRATE_JOB: order-migrate
+  MIGRATE_JOB: order-service-migrate
   AZURE_KEY_VAULT_ENABLED: "true"
 
 jobs:
