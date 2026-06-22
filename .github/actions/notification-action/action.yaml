@@ -1,5 +1,5 @@
 name: Email and Slack Notification
-description: Send email and slack notification
+description: Send email and Slack notification
 
 inputs:
   pipeline_name:

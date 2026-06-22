@@ -23,11 +23,6 @@ router = APIRouter(
 )
 
 
-@router.get("/health")
-def health():
-    return {"status": "ok"}
-
-
 @router.post("/create-order", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/create-order/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 def create_order_api(
@@ -82,6 +77,7 @@ def list_orders_api(
 def update_order_api(
     order_id: int,
     data: OrderUpdate,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[object, Depends(require_permission("order.update"))],
 ):
@@ -89,17 +85,19 @@ def update_order_api(
         db,
         order_id,
         current_user.org_id,
-        [item.model_dump() for item in data.items]
+        [item.model_dump() for item in data.items],
+        request.headers.get("Authorization"),
     )
 
 
 @router.post("/{order_id}/confirm", response_model=OrderResponse)
 def confirm_order_api(
     order_id: int,
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[object, Depends(require_permission("order.confirm"))],
 ):
-    return confirm_order(db, order_id, current_user.org_id)
+    return confirm_order(db, order_id, current_user.org_id, request.headers.get("Authorization"))
 
 
 @router.post("/{order_id}/cancel", response_model=OrderResponse)
