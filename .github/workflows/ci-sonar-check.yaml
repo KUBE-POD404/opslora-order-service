@@ -35,6 +35,14 @@ jobs:
             exit 1
           fi
 
+      - name: Disable SonarCloud automatic analysis for CI scanner
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || github.event.repository.name }}
+        run: |
+          curl -fsS -u "${SONAR_TOKEN}:" -X POST \
+            "https://sonarcloud.io/api/autoscan/activation?projectKey=${SONAR_PROJECT_KEY}&enable=false"
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
